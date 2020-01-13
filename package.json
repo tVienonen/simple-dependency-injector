@@ -1,0 +1,35 @@
+{
+  "name": "simple-dependency-injector",
+  "version": "1.0.0",
+  "description": "Very simple dependency injector with an easy API.",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "gulp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tVienonen/simple-dependency-injector.git"
+  },
+  "keywords": [
+    "dependency",
+    "injection",
+    "injector",
+    "container",
+    "tool",
+    "simple"
+  ],
+  "author": "Topi Vienonen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tVienonen/simple-dependency-injector/issues"
+  },
+  "homepage": "https://github.com/tVienonen/simple-dependency-injector#readme",
+  "devDependencies": {
+    "@babel/core": "^7.8.0",
+    "@babel/preset-env": "^7.8.2",
+    "gulp": "^4.0.2",
+    "gulp-babel": "^8.0.0-beta.2",
+    "gulp-concat": "^2.6.1"
+  }
+}
