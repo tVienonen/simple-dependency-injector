@@ -8,7 +8,7 @@ This package contains a simple implementation for a dependency container and an 
 
 ```javascript
 // Example with decorator syntax
-import { Injectable } from 'simple-dependency-injector';
+import { Injectable } from 'deeai';
 import { LOGGER, MYCLASS } from './dependencyTokens';
 
 // When the injector is resolving MyClass it will throw an error if LOGGER dependency is not registered to the container.
@@ -31,7 +31,7 @@ import './myclass';
 import './logger';
 
 // OR if you don't want to use decorators you can manually register the dependencies with the dependency container's API
-import di from 'simple-dependency-injector';
+import di from 'deeai';
 import MyClass from './myclass';
 import Logger from './logger';
 import { MYCLASS, LOGGER } from './dependencyTokens';
@@ -51,7 +51,7 @@ di.Register(LOGGER, {
 ```javascript
 // In your application's business logic
 // Import the dependency injector
-import di from 'simple-dependency-injector';
+import di from 'deeai';
 import { LOGGER, MYCLASS } from './dependencyTokens';
 
 const logger = di.Get(LOGGER);
@@ -95,7 +95,7 @@ const options = {
 ## Eagerly resolving dependencies
 If you want to resolve depencies eagerly before they are actually needed you call the EagerResolve method of the dependency injector.
 ```javascript
-import di from 'simple-depenedency-injector';
+import di from 'deeai';
 import { LOGGER } from './dependencyTokens';
 
 // LOGGER still has to be registered before trying to resolve it.
