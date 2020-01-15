@@ -9,5 +9,13 @@
                 "modules": "commonjs"
             }
         ]
+    ],
+    "plugins": [
+        [
+            "@babel/plugin-proposal-decorators",
+            {
+                "legacy": true
+            }
+        ]
     ]
 }

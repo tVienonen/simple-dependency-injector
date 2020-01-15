@@ -55,14 +55,39 @@ DependencyInjectorContainer.EagerResolve = (...identifiers) => {
     DependencyInjectorContainer.Get(id);
   }
 };
+/**
+ * Clears the dependency container. Used in testing.
+ */
+DependencyInjectorContainer._restoreContainer = () => {
+  DependencyInjectorContainer._dependencies = new Map();
+}
 
 export default DependencyInjectorContainer;
 
-export const Injectable = (identifier, variant, ...deps) => {
+export const Injectable = (identifier, ...deps) => {
   return target => {
     DependencyInjectorContainer.Register(identifier, {
-      [variant]: target,
+      class: target,
       deps
     });
   };
 };
+
+export const Inject = (...identifiers) => {
+  return target => {
+    let args = null;
+    
+    const overriden = function() {
+      if (args === null && arguments.length === 0) {
+        args = [];
+        for (const identifier of identifiers) {
+          args.push(DependencyInjectorContainer.Get(identifier));
+        }
+      }
+      return new target(...(arguments.length ? arguments : args));
+    }
+    overriden.prototype = target.prototype;
+
+    return overriden;
+  }
+}

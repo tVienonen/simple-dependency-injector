@@ -4,7 +4,7 @@
   "description": "Very simple dependency injector with an easy API.",
   "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha --recursive --exit --require @babel/register test",
     "build": "gulp"
   },
   "repository": {
@@ -27,9 +27,14 @@
   "homepage": "https://github.com/tVienonen/simple-dependency-injector#readme",
   "devDependencies": {
     "@babel/core": "^7.8.0",
+    "@babel/plugin-proposal-decorators": "^7.8.3",
     "@babel/preset-env": "^7.8.2",
+    "@babel/register": "^7.8.3",
+    "babel-node": "0.0.1-security",
+    "chai": "^4.2.0",
     "gulp": "^4.0.2",
     "gulp-babel": "^8.0.0-beta.2",
-    "gulp-concat": "^2.6.1"
+    "gulp-concat": "^2.6.1",
+    "mocha": "^7.0.0"
   }
 }

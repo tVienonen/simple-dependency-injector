@@ -11,8 +11,10 @@ This package contains a simple implementation for a dependency container and an 
 import { Injectable } from 'deeai';
 import { LOGGER, MYCLASS } from './dependencyTokens';
 
+// First argument to the Injectable decorator factory function is the identifier of the Class to be registered.
+// Rest of the arguments are identifiers of the dependencies of the class
 // When the injector is resolving MyClass it will throw an error if LOGGER dependency is not registered to the container.
-@Injectable(MYCLASS, 'class', LOGGER)
+@Injectable(MYCLASS, LOGGER)
 class MyClass {
     // Dependencies will be injected to the constructor in the order they are applied to the Injectable decorator.
     constructor(loggerInstance) {
