@@ -1,6 +1,6 @@
 // @ts-nocheck
 import chai from 'chai';
-import di, { Injectable, Inject } from '../src/index';
+import di, { Injectable, Inject } from 'src/index';
 
 describe('deeai', () => {
     afterEach(() => {
@@ -16,8 +16,7 @@ describe('deeai', () => {
 
         @Inject('FOO')
         class DependentClass {
-            constructor(foo) {
-                this.foo = foo;
+            constructor(private foo: Foo) {
             }
 
             test() {
@@ -36,8 +35,7 @@ describe('deeai', () => {
 
         @Inject('FOO')
         class DependentClass {
-            constructor(foo) {
-                this.foo = foo;
+            constructor(private foo: Foo) {
             }
 
             test() {

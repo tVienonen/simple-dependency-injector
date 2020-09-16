@@ -2,10 +2,10 @@
   "name": "deeai",
   "version": "2.0.0",
   "description": "Very simple dependency injector with an easy API.",
-  "main": "dist/index.js",
+  "main": "build/index.js",
   "scripts": {
-    "test": "mocha --recursive --exit --require @babel/register test",
-    "build": "gulp"
+    "test": "mocha --recursive --exit --require ts-node/register --require tsconfig-paths/register test/index.test.ts",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -30,11 +30,15 @@
     "@babel/plugin-proposal-decorators": "^7.8.3",
     "@babel/preset-env": "^7.8.2",
     "@babel/register": "^7.8.3",
+    "@tsconfig/node12": "^1.0.7",
     "babel-node": "0.0.1-security",
     "chai": "^4.2.0",
     "gulp": "^4.0.2",
     "gulp-babel": "^8.0.0-beta.2",
     "gulp-concat": "^2.6.1",
-    "mocha": "^7.0.0"
+    "mocha": "^7.0.0",
+    "ts-node": "^9.0.0",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^4.0.2"
   }
 }

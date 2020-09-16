@@ -1,4 +1,19 @@
-const DependencyInjectorContainer = {};
+export interface DependencyDefinition<T = any> {
+  deps?: string[];
+  factory?: (...deps: string[]) => T;
+  value?: T;
+  class?: new (...args: any[]) => T
+}
+
+export interface IDependencyInjectorContainer {
+  _dependencies: Map<string, DependencyDefinition>;
+  _restoreContainer: () => void;
+  Register: (identifier: string, options: DependencyDefinition) => void;
+  Get: <T = any>(identifier: string) => T;
+  EagerResolve: (...identifiers: string[]) => void;
+}
+
+const DependencyInjectorContainer = {} as IDependencyInjectorContainer;
 
 /**
  * Internal use only
@@ -18,6 +33,7 @@ DependencyInjectorContainer.Register = (identifier, options) => {
     }
   }
   if (DependencyInjectorContainer._dependencies.has(identifier)) {
+    // @ts-ignore
     console.warn('Dependency was already registered. Make sure you wanted to overwrite an existing dependency!');
   }
   DependencyInjectorContainer._dependencies.set(identifier, options);
@@ -64,8 +80,8 @@ DependencyInjectorContainer._restoreContainer = () => {
 
 export default DependencyInjectorContainer;
 
-export const Injectable = (identifier, ...deps) => {
-  return target => {
+export const Injectable = <T extends new (...args: any[]) => any>(identifier: string, ...deps: string[]) => {
+  return (target: T) => {
     DependencyInjectorContainer.Register(identifier, {
       class: target,
       deps
@@ -73,10 +89,13 @@ export const Injectable = (identifier, ...deps) => {
   };
 };
 
-export const Inject = (...identifiers) => {
-  return target => {
-    let args = null;
-    
+export const Inject = <T extends new (...args: any[]) => any>(...identifiers: string[]) => {
+  return (target: T) => {
+    let args = null as any;
+    // Overrides the constructor of the target class
+    // If class is called without any arguments then dependency injection will
+    // inject the dependencies to the class constructor
+    // Otherwise the arguments will be used in the constructor
     const overriden = function() {
       if (args === null && arguments.length === 0) {
         args = [];
