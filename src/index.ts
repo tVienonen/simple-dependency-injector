@@ -1,29 +1,47 @@
+export type Dependency = string|DependencyToken|(new (...args: any[]) => any);
+
+export interface DependencyToken<T = any> {
+  tokenName: string;
+  type: T
+}
+
+export function createDependencyToken<T = any>(dependencyName: string, type: T) {
+  return {
+    tokenName: dependencyName,
+    type
+  } as DependencyToken<T>;
+}
+
 export interface DependencyDefinition<T = any> {
-  deps?: string[];
+  deps?: Dependency[];
   factory?: (...deps: string[]) => T;
   value?: T;
-  class?: new (...args: any[]) => T
+  class?: new (...args: any[]) => T;
 }
 
 export interface IDependencyInjectorContainer {
-  _dependencies: Map<string, DependencyDefinition>;
+  _dependencies: Map<any, DependencyDefinition>;
   _restoreContainer: () => void;
-  Register: (identifier: string, options: DependencyDefinition) => void;
-  Get: <T = any>(identifier: string) => T;
-  EagerResolve: (...identifiers: string[]) => void;
+  Register<T = any>(dependencyToken: DependencyToken<T>, options: DependencyDefinition<any>): void;
+  Register<T extends new (...args: any[]) => any>(identifier: T, options: DependencyDefinition<T>): void;
+  Register<T = any>(identifier: string, options: DependencyDefinition<T>): void;
+  Get<T extends new (...args: any[]) => any>(identifier: T): InstanceType<T>;
+  Get<T = any>(identifier: DependencyToken<T>): typeof identifier.type extends new (...args: any[]) => any ? InstanceType<typeof identifier.type> : typeof identifier.type;
+  Get<T = any>(identifier: string): T;
+  EagerResolve: (...identifiers: Dependency[]) => void;
 }
 
 const DependencyInjectorContainer = {} as IDependencyInjectorContainer;
 
 /**
  * Internal use only
- * @type {Map<string, any>}
+ * @type {Map<any, any>}
  */
 DependencyInjectorContainer._dependencies = new Map();
 /**
- * Register a dependency into the container
+ * Manually register a dependency into the container
  */
-DependencyInjectorContainer.Register = (identifier, options) => {
+DependencyInjectorContainer.Register = (identifier: Dependency, options: DependencyDefinition) => {
   if (!options) {
     throw new Error('No options provided!');
   }
@@ -32,19 +50,27 @@ DependencyInjectorContainer.Register = (identifier, options) => {
       throw new Error(`Expected options.deps to be an array when it was ${typeof options.deps}`);
     }
   }
-  if (DependencyInjectorContainer._dependencies.has(identifier)) {
+  let _identifier = identifier;
+  if (identifier != null && typeof identifier !== 'string' && 'tokenName' in identifier) {
+    _identifier = identifier.tokenName
+  }
+  if (DependencyInjectorContainer._dependencies.has(_identifier as string)) {
     // @ts-ignore
     console.warn('Dependency was already registered. Make sure you wanted to overwrite an existing dependency!');
   }
-  DependencyInjectorContainer._dependencies.set(identifier, options);
+  DependencyInjectorContainer._dependencies.set(_identifier as string, options);
 };
 /**
  * Get a registered dependency from the container
  */
-DependencyInjectorContainer.Get = identifier => {
-  const depOptions = DependencyInjectorContainer._dependencies.get(identifier);
+DependencyInjectorContainer.Get = <T extends new (...args: any[]) => any>(identifier: string|DependencyToken|T) => {
+  let _identifier = identifier;
+  if (identifier != null && typeof identifier !== 'string' && 'tokenName' in identifier) {
+    _identifier = identifier.tokenName
+  }
+  const depOptions = DependencyInjectorContainer._dependencies.get(_identifier);
   if (!depOptions) {
-    throw new Error(`No dependency registered for this identifier: ${identifier}`);
+    throw new Error(`No dependency registered for this identifier: ${_identifier}`);
   }
   if (depOptions.value) {
     return depOptions.value;
@@ -52,7 +78,7 @@ DependencyInjectorContainer.Get = identifier => {
   let resolvedDeps = [];
   if (depOptions.deps) {
     for (let requiredDep of depOptions.deps) {
-      resolvedDeps.push(DependencyInjectorContainer.Get(requiredDep));
+      resolvedDeps.push(DependencyInjectorContainer.Get(requiredDep as any));
     }
   }
   if (depOptions.factory) {
@@ -68,7 +94,7 @@ DependencyInjectorContainer.Get = identifier => {
  */
 DependencyInjectorContainer.EagerResolve = (...identifiers) => {
   for (const id of identifiers) {
-    DependencyInjectorContainer.Get(id);
+    DependencyInjectorContainer.Get(id as any);
   }
 };
 /**
@@ -79,34 +105,64 @@ DependencyInjectorContainer._restoreContainer = () => {
 }
 
 export default DependencyInjectorContainer;
-
-export const Injectable = <T extends new (...args: any[]) => any>(identifier: string, ...deps: string[]) => {
+/**
+ * Registers target class to the dependency container
+ * 
+ * Passes the listed dependencies to the constructor of the class
+ * @param deps Dependencies of the injectable target (constructor parameters)
+ */
+export function Injectable<T extends new (...args: any[]) => any>(deps?: Dependency[]): any;
+/**
+ * Registers target class to the dependency container
+ * 
+ * Passes the listed dependencies to the constructor of the class
+ * @param identifier explicit identifier for the class used when getting the resolved instance
+ * @param deps Dependencies of the injectable target (constructor parameters)
+ */
+export function Injectable<T extends new (...args: any[]) => any>(identifier: string, ...deps: Dependency[]): any;
+/**
+ * Registers target class to the dependency container
+ * 
+ * Passes the listed dependencies to the constuctor of the class
+ * @param token DependencyToken created with createDependencyToken()
+ * @param deps Dependencies of the injectable target (constructor parameters) 
+ */
+export function Injectable<T extends new (...args: any[]) => any>(token: DependencyToken, ...deps: Dependency[]): any;
+export function Injectable<T extends new (...args: any[]) => any>(identifier?: string|DependencyToken|Dependency[], ...deps: Dependency[]) {
   return (target: T) => {
-    DependencyInjectorContainer.Register(identifier, {
-      class: target,
-      deps
-    });
+    if (Array.isArray(identifier) || identifier === undefined) {
+      DependencyInjectorContainer.Register(target, {
+        class: target,
+        deps: identifier
+      });
+    } else {
+      DependencyInjectorContainer.Register(identifier, {
+        class: target,
+        deps
+      });
+    }
   };
 };
 
-export const Inject = <T extends new (...args: any[]) => any>(...identifiers: string[]) => {
-  return (target: T) => {
-    let args = null as any;
-    // Overrides the constructor of the target class
-    // If class is called without any arguments then dependency injection will
-    // inject the dependencies to the class constructor
-    // Otherwise the arguments will be used in the constructor
-    const overriden = function() {
-      if (args === null && arguments.length === 0) {
-        args = [];
-        for (const identifier of identifiers) {
-          args.push(DependencyInjectorContainer.Get(identifier));
-        }
+/**
+ * Inject dependencies to a class
+ * @param target Target class to inject dependencies to
+ * @param deps List of dependencies that are registered to the Dependency container
+ * 
+ * @returns a factory function which when called instantiates the class with resolved dependencies.
+ */
+export function Inject<T extends new (...args: any[]) => any>(target: T, deps: (string|DependencyToken|(new (...args: any[]) => any))[]) {
+  return function(): InstanceType<T> {
+    const args = [];
+    for (const dep of deps) {
+      if (typeof dep === 'string') {
+        args.push(DependencyInjectorContainer.Get(dep));
+      } else if (dep != null && 'tokenName' in dep) {
+        args.push(DependencyInjectorContainer.Get(dep));
+      } else {
+        args.push(DependencyInjectorContainer.Get(dep));
       }
-      return new target(...(arguments.length ? arguments : args));
     }
-    overriden.prototype = target.prototype;
-
-    return overriden;
+    return new target(...args);
   }
 }

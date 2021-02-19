@@ -1,14 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Inject = exports.Injectable = void 0;
+exports.Inject = exports.Injectable = exports.createDependencyToken = void 0;
+function createDependencyToken(dependencyName, type) {
+    return {
+        tokenName: dependencyName,
+        type
+    };
+}
+exports.createDependencyToken = createDependencyToken;
 const DependencyInjectorContainer = {};
 /**
  * Internal use only
- * @type {Map<string, any>}
+ * @type {Map<any, any>}
  */
 DependencyInjectorContainer._dependencies = new Map();
 /**
- * Register a dependency into the container
+ * Manually register a dependency into the container
  */
 DependencyInjectorContainer.Register = (identifier, options) => {
     if (!options) {
@@ -19,19 +26,27 @@ DependencyInjectorContainer.Register = (identifier, options) => {
             throw new Error(`Expected options.deps to be an array when it was ${typeof options.deps}`);
         }
     }
-    if (DependencyInjectorContainer._dependencies.has(identifier)) {
+    let _identifier = identifier;
+    if (identifier != null && typeof identifier !== 'string' && 'tokenName' in identifier) {
+        _identifier = identifier.tokenName;
+    }
+    if (DependencyInjectorContainer._dependencies.has(_identifier)) {
         // @ts-ignore
         console.warn('Dependency was already registered. Make sure you wanted to overwrite an existing dependency!');
     }
-    DependencyInjectorContainer._dependencies.set(identifier, options);
+    DependencyInjectorContainer._dependencies.set(_identifier, options);
 };
 /**
  * Get a registered dependency from the container
  */
-DependencyInjectorContainer.Get = identifier => {
-    const depOptions = DependencyInjectorContainer._dependencies.get(identifier);
+DependencyInjectorContainer.Get = (identifier) => {
+    let _identifier = identifier;
+    if (identifier != null && typeof identifier !== 'string' && 'tokenName' in identifier) {
+        _identifier = identifier.tokenName;
+    }
+    const depOptions = DependencyInjectorContainer._dependencies.get(_identifier);
     if (!depOptions) {
-        throw new Error(`No dependency registered for this identifier: ${identifier}`);
+        throw new Error(`No dependency registered for this identifier: ${_identifier}`);
     }
     if (depOptions.value) {
         return depOptions.value;
@@ -65,32 +80,47 @@ DependencyInjectorContainer._restoreContainer = () => {
     DependencyInjectorContainer._dependencies = new Map();
 };
 exports.default = DependencyInjectorContainer;
-exports.Injectable = (identifier, ...deps) => {
+function Injectable(identifier, ...deps) {
     return (target) => {
-        DependencyInjectorContainer.Register(identifier, {
-            class: target,
-            deps
-        });
+        if (Array.isArray(identifier) || identifier === undefined) {
+            DependencyInjectorContainer.Register(target, {
+                class: target,
+                deps: identifier
+            });
+        }
+        else {
+            DependencyInjectorContainer.Register(identifier, {
+                class: target,
+                deps
+            });
+        }
     };
-};
-exports.Inject = (...identifiers) => {
-    return (target) => {
-        let args = null;
-        // Overrides the constructor of the target class
-        // If class is called without any arguments then dependency injection will
-        // inject the dependencies to the class constructor
-        // Otherwise the arguments will be used in the constructor
-        const overriden = function () {
-            if (args === null && arguments.length === 0) {
-                args = [];
-                for (const identifier of identifiers) {
-                    args.push(DependencyInjectorContainer.Get(identifier));
-                }
+}
+exports.Injectable = Injectable;
+;
+/**
+ * Inject dependencies to a class
+ * @param target Target class to inject dependencies to
+ * @param deps List of dependencies that are registered to the Dependency container
+ *
+ * @returns a factory function which when called instantiates the class with resolved dependencies.
+ */
+function Inject(target, deps) {
+    return function () {
+        const args = [];
+        for (const dep of deps) {
+            if (typeof dep === 'string') {
+                args.push(DependencyInjectorContainer.Get(dep));
             }
-            return new target(...(arguments.length ? arguments : args));
-        };
-        overriden.prototype = target.prototype;
-        return overriden;
+            else if (dep != null && 'tokenName' in dep) {
+                args.push(DependencyInjectorContainer.Get(dep));
+            }
+            else {
+                args.push(DependencyInjectorContainer.Get(dep));
+            }
+        }
+        return new target(...args);
     };
-};
+}
+exports.Inject = Inject;
 //# sourceMappingURL=index.js.map

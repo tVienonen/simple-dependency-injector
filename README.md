@@ -2,71 +2,151 @@
 
 This package contains a simple implementation for a dependency container and an injector. Dependency container is singleton object that contains the registered dependencies. After registering dependencies to the container the user can fetch a dependency with a dependency token.
 
-## Usage
+## Usage with classes (Recommended way)
 
-1. Write your dependency injectable class or value (function, primitive, plain object)
+1. Implement your dependency class first
 
-```javascript
-// Example with decorator syntax
+```typescript
+// logger.ts
 import { Injectable } from 'deeai';
-import { LOGGER, MYCLASS } from './dependencyTokens';
 
-// First argument to the Injectable decorator factory function is the identifier of the Class to be registered.
-// Rest of the arguments are identifiers of the dependencies of the class
-// When the injector is resolving MyClass it will throw an error if LOGGER dependency is not registered to the container.
-@Injectable(MYCLASS, LOGGER)
-class MyClass {
-    // Dependencies will be injected to the constructor in the order they are applied to the Injectable decorator.
-    constructor(loggerInstance) {
-        this.logger = loggerInstance;
+@Injectable()
+class Logger {
+    log() {
+        // writes to log
     }
 }
+
+export default Logger;
 ```
 
-2. Register your dependencies at application startup
+2. Then implement your dependent class
+```typescript
+// my-service.ts
+import { Injectable } from 'deeai';
+import { Logger } from './logger';
 
-```javascript
-// boot.js
-// Make sure you import this file as soon as possible in your application's lifecycle
-// if you used the decorator syntax you can just do an empty import from the file
-import './myclass';
-import './logger';
+@Injectable([Logger])
+class MyService {
+    constructor (private logger: Logger) {}
 
-// OR if you don't want to use decorators you can manually register the dependencies with the dependency container's API
-import di from 'deeai';
-import MyClass from './myclass';
-import Logger from './logger';
-import { MYCLASS, LOGGER } from './dependencyTokens';
+    doServiceStuff() {
+        this.logger.log('Doing service stuff');
+        // ...
+    }
+}
 
-di.Register(MYCLASS, {
-    class: MyClass,
-    deps: [LOGGER]
-});
-di.Register(LOGGER, {
-    class: Logger,
-    deps: []
-});
+export default MyService;
 ```
+3. Then in your code where you need the service.
 
-3. Getting the dependencies
-
-```javascript
-// In your application's business logic
-// Import the dependency injector
+```typescript
+// main.ts
 import di from 'deeai';
-import { LOGGER, MYCLASS } from './dependencyTokens';
+import MyService from './my-service';
 
-const logger = di.Get(LOGGER);
-const myClass = di.Get(MYCLASS);
-
-
-function handleEvent(data) {
-    // Use instances of injected dependencies
-    logger.debug('Received event from stream: ', data);
-    myClass.doMyClassStuff();
+function main() {
+    // myService will be an instance of MyService
+    // Note: Dependencies will only be instantiated once
+    // they will be singletons essentially
+    const myService = di.Get(Myservice);
+    myService.doServiceStuff();
 }
 ```
 
+**Note: For more usage examples have a look at the test folder in the git repository**
+
+## Dependency identifiers
+
+Dependency identifiers are used to match the identier to a dependency that is registered to the dependency container.
+
+### Identifier types
+
+There are three types of identifiers: Classes, plain old strings and dependency tokens.
+
+**Classes**
+
+Classes are the recommended method. Dependency container will use the class as an identifier for the dependency. When using classes it is recommended to use the Injectable decorator.
+
+```typescript
+import { Injectable } from 'deeai';
+import DependencyOfMyDependency from './dep1';
+
+@Injectable([DependencyOfMyDependency])
+class MyDependency {
+    constructor (private dep: DependencyOfMyDependency) {}
+    complexLogic() {
+        // ...
+    }
+}
+
+export default MyDependency;
+```
+
+If you are not using decorators you can just use the decorator as a function. This has the same effect as above.
+```typescript
+// Same file as above but different way of registerin the dependency
+import { Injectable } from 'deeai';
+import DependencyOfMyDependency from './dep1';
+
+class MyDependency {
+    constructor (private dep: DependencyOfMyDependency) {}
+    complexLogic() {
+        // ...
+    }
+}
+
+Injectable([DependencyOfMyDependency])(MyDependency);
+
+export default MyDependency;
+```
+**Strings**
+
+Using strings is simple you just associate a string value with a dependency.
+
+```typescript
+import di from 'deeai';
+import DependencyClass from './dependencyClass';
+
+
+di.Register('MY_DEPENDENCY', {
+    class: DependencyClass,
+    deps: ['DEPENDENCY_OF_MY_DEPENDENCY'] // Example. Dependencies need to be also registered before calling Get()
+});
+
+const dep = di.Get('MY_DEPENDENCY');
+```
+
+The disadvantage is that you will not have type resolution when using string identifiers. You will only get the any type when calling Get().
+
+**Dependency tokens**
+
+Dependency tokens are similar to strings but you can use them to associate a type with the identifier.
+
+```typescript
+import { createDependencyToken } from 'deeai';
+
+const myDep = {
+    config: {
+        language: 'us'
+    }
+};
+
+export const token = createDependencyToken('MY_DEP', myDep);
+
+// somewhere else in the project
+import di from 'deeai';
+import { token } from './my-dep';
+
+di.Register(token, {
+    // if type pointed to by the token is a value use value property.
+    // Otherwise use class or factory
+    value: token.type
+});
+
+const myDep = di.Get(token);
+// myDep is now typed properly
+```
 ## Dependency injector's item variants
 
 There are 3 different things you can register to the dependency injector. The variant of the item is specified in the Injectable's second argument or as a name of a field in the Register method's options object.

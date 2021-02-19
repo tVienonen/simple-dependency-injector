@@ -1,22 +1,16 @@
 {
     "extends": "@tsconfig/node12/tsconfig.json",
     "include": [
-        "src",
+        "./**/*.ts",
     ],
     "compilerOptions": {
         "experimentalDecorators": true,
         "allowJs": true,
         "outDir": "./build",
         "baseUrl": ".",
-        "paths": {
-            "src/*": [
-                "src/*"
-            ]
-        },
         "sourceMap": true,
         "moduleResolution": "node",
         "module": "CommonJS",
         "declaration": true,
-        "declarationMap": true
     }
 }
