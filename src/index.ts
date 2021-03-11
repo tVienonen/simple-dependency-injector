@@ -14,7 +14,7 @@ export function createDependencyToken<T = any>(dependencyName: string, type: T) 
 
 export interface DependencyDefinition<T = any> {
   deps?: Dependency[];
-  factory?: (...deps: string[]) => T;
+  factory?: (...deps: any[]) => T;
   value?: T;
   class?: new (...args: any[]) => T;
 }
